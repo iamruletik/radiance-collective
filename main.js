@@ -22,7 +22,18 @@ const SIZES = {
 }
 
 //Renderer
-const RENDERER = new WebGPURenderer({ canvas: CANVAS, powerPreference: "high-performance", alpha: true, antialias: true })
+//Some browsers expose navigator.gpu but return null from getContext('webgpu'), which crashes on the first render instead of falling back to WebGL2
+const checkWebGPUSupport = async () => {
+    try {
+        const adapter = await navigator.gpu?.requestAdapter()
+        if (!adapter) return false
+        return document.createElement('canvas').getContext('webgpu') !== null
+    } catch (error) {
+        return false
+    }
+}
+
+const RENDERER = new WebGPURenderer({ canvas: CANVAS, forceWebGL: !(await checkWebGPUSupport()), powerPreference: "high-performance", alpha: true, antialias: true })
 await RENDERER.init() //WebGPURenderer needs to resolve its backend (WebGPU, or WebGL2 fallback) before first use
 RENDERER.setSize(window.innerWidth, window.innerHeight)
 RENDERER.setPixelRatio(window.devicePixelRatio)
