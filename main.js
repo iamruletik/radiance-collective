@@ -5,6 +5,7 @@ import { Pane } from 'tweakpane'
 import * as EssentialsPlugin from '@tweakpane/plugin-essentials'
 import { HDRLoader } from 'three/examples/jsm/loaders/HDRLoader.js'
 import HEIGHTMAP_URL from './assets/normals/heightmap-example.jpg'
+import HaloSlider from './HaloSlider.js'
 
 const BACKGROUND_COLOR = 0xFFFFFF
 const DEBUG = new Pane()
@@ -116,6 +117,7 @@ const rebuildGeometry = () => {
     )
     HALO.geometry.dispose()
     HALO.geometry = newGeometry
+    HALO_SLIDER.rebuild(PARAMS.radius, PARAMS.tube)
 }
 
 GEOMETRY_DEBUG.addBinding(PARAMS, 'radius', { min: 1, max: 50, step: 0.5 })
@@ -314,8 +316,8 @@ const TIMELINE = [
     { scroll: 0.25, pose: 'rest', spinTurns: 0 },
     { scroll: 0.75, pose: 'rest', spinTurns: 1 }, //First spin, middle of the first 100vh - a longer scroll range makes it slower
     { scroll: 2.7, pose: 'near', spinTurns: 2 }, //Moves closer to the camera
-    { scroll: 3.2, pose: 'near', spinTurns: 2 }, //Holds for 50vh
-    { scroll: 4.0, pose: 'logo', spinTurns: 2 } //Moves back and up to the header
+    { scroll: 4.7, pose: 'near', spinTurns: 2 }, //Holds for 200vh while the slider is up
+    { scroll: 5.5, pose: 'logo', spinTurns: 2 } //Moves back and up to the header
 ]
 
 const POSE = { rotationX: 0, positionY: 0, positionZ: 0, spin: 0, idleWave: 0 } //Written by applyTimelineAtScroll() every frame, idleWave is looped by Motion
@@ -360,6 +362,32 @@ Object.entries(POSES).forEach(([poseName, pose]) => {
     poseFolder.addBinding(pose, 'positionZ', { min: -200, max: 200, step: 1 })
 })
 
+//Halo Slider
+const HALO_SLIDER_CONFIG = {
+    panelCount: 16, //Full 360 ring, only the far half is in view from inside
+    panelGapAngle: 0.04, //Radians of empty space between panels
+    segmentsPerPanel: 8, //Curve smoothness of each panel
+    radius: PARAMS.radius, //Matches the torus so the band lines up with the ring
+    tube: PARAMS.tube,
+    height: 10, //Band height along the ring axis
+    offset: 0.5, //Gap between the tube surface and the bottom of the band
+    autoRotateSpeed: 0.05, //Radians per second
+    scrollRotation: 0.6, //Radians per viewport of scroll
+    fadeIn: { start: 2.2, end: 2.7 }, //Scroll range in viewports, ends as the ring reaches the near pose
+    fadeOut: { start: 4.7, end: 5.0 } //Starts as the ring leaves the near pose
+}
+
+const HALO_SLIDER = new HaloSlider(HALO, HALO_SLIDER_CONFIG)
+HALO_SLIDER.setup()
+
+const SLIDER_DEBUG = DEBUG.addFolder({ title: 'Halo Slider', expanded: false })
+SLIDER_DEBUG.addBinding(HALO_SLIDER_CONFIG, 'height', { min: 1, max: 40, step: 0.5 })
+    .on('change', (ev) => { if (ev.last) HALO_SLIDER.rebuild() })
+SLIDER_DEBUG.addBinding(HALO_SLIDER_CONFIG, 'offset', { min: -10, max: 20, step: 0.1 })
+    .on('change', (ev) => { if (ev.last) HALO_SLIDER.rebuild() })
+SLIDER_DEBUG.addBinding(HALO_SLIDER_CONFIG, 'autoRotateSpeed', { min: -1, max: 1, step: 0.01 })
+SLIDER_DEBUG.addBinding(HALO_SLIDER_CONFIG, 'scrollRotation', { min: -3, max: 3, step: 0.01 })
+
 //Animation Loop Function
 const tick = () => {
     FPS.begin()
@@ -379,6 +407,7 @@ const tick = () => {
 
     HALO.rotation.x = POSE.rotationX + POSE.spin + POSE.idleWave * IDLE_AMPLITUDE
     HALO.position.set(0, POSE.positionY, POSE.positionZ)
+    HALO_SLIDER.update(FRAME_SECONDS, smoothedScroll)
 
     //Render Function
     RENDERER.render(SCENE, CAMERA) //by default all objects will appear at center of the scene in 0 0 0 coordinates, meaning camera will be at the center too
