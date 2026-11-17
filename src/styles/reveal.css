@@ -1,0 +1,17 @@
+/* BlurReveal masks: each designed line clips its text top and bottom only, bleeding 0.2em so ascenders and descenders aren't cut.
+   No side clipping: lines only move vertically, and overhanging last glyphs (tight tracking, italics) must stay whole */
+[data-line] {
+    display: block;
+    clip-path: inset(0 -100vw);
+    padding-block: 0.2em;
+    margin-block: -0.2em;
+}
+
+.reveal-line {
+    display: block;
+}
+
+/* Hidden until BlurReveal has parked the lines, so text never flashes before JS runs */
+[data-reveal]:not(.reveal-ready) {
+    visibility: hidden;
+}

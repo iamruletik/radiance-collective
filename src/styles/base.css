@@ -1,28 +1,98 @@
-* {
-  margin: 0;
-  padding: 0;
+@import 'lenis/dist/lenis.css';
+@import './fonts.css';
+@import './header.css';
+@import './hero.css';
+@import './showreel.css';
+@import './clients.css';
+@import './reveal.css';
+
+/* Fluid root: 1rem = 10 design px, so a 24px Figma value is 2.4rem
+   Desktop frame 1440, mobile frame 402 */
+/* The scrollbar's space stays reserved while scroll is locked (preloader, page transitions), so nothing jumps sideways */
+/* Stacking, bottom to top: page content, the WebGL canvas (halo, clouds), content that covers the halo, the header */
+:root {
+    --layer-canvas: 1;
+    --layer-over-canvas: 2;
+    --layer-header: 3;
 }
 
+html {
+    font-size: calc(100vw / 144);
+    scrollbar-gutter: stable;
+}
+
+@media (max-width: 768px) {
+    html {
+        font-size: calc(100vw / 40.2);
+    }
+}
+
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Smallest text never drops below 16px desktop / 14px mobile, however small the screen */
 body {
-    background-color: #ffffff;
+    background: #ffffff;
+    font-size: max(1.6rem, 16px);
+    -webkit-font-smoothing: antialiased;
 }
 
-.canvas_container {
+@media (max-width: 768px) {
+    body {
+        font-size: max(1.4rem, 14px);
+    }
+}
+
+a {
+    color: inherit;
+    text-decoration: none;
+}
+
+button {
+    font: inherit;
+    color: inherit;
+    background: none;
+    border: 0;
+    cursor: pointer;
+}
+
+/* lvh keeps the canvas still while mobile URL bars slide, vh is the fallback for older Safari
+   Above page content so the halo is in front of everything, below the header. Clicks pass through to the page */
+.webgl {
     position: fixed;
-    top: 0;
-    left: 0;
-    overflow: hidden;
-    width: 100vw;
+    inset: 0;
+    z-index: var(--layer-canvas);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.8s ease;
+    display: block;
+    width: 100%;
+    height: 100vh;
+    height: 100lvh;
+}
+
+.webgl.is-visible {
+    opacity: 1;
+}
+
+main {
+    position: relative;
+}
+
+/* Temporary scroll length from the halo timeline, set in HaloTimeline.js */
+.home {
+    min-height: calc(var(--halo-timeline-length, 1) * 100vh);
+}
+
+/* Its sky and clouds are drawn on the canvas behind it, see Clouds.js */
+.footer {
+    position: relative;
     height: 100vh;
 }
 
-/* Height is set from the timeline in main.js */
-.scroll_spacer {
-    width: 1px;
-}
-
-/* Tweakpane defaults to position: absolute, which only looked fixed while the page could not scroll */
-.tp-dfwv {
-    position: fixed !important;
-    z-index: 10;
+.about {
+    min-height: 100vh;
 }

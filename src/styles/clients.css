@@ -1,0 +1,63 @@
+/* Sticky stage the halo spins over, its length is set by Clients.js. Blocks stack in the centre, one shows per hole opening */
+.clients {
+    height: calc(var(--clients-length, 8) * 100vh);
+}
+
+/* One column as wide as the widest block, so the halo box below can size from it */
+.clients__stage {
+    position: sticky;
+    top: 0;
+    display: grid;
+    grid-template-columns: max-content;
+    justify-content: center;
+    align-content: center;
+    place-items: center;
+    height: 100vh;
+    text-align: center;
+}
+
+.clients__stage > * {
+    grid-area: 1 / 1;
+}
+
+/* Box the 3D halo grows into, see the `clients` pose. The hole is 74% of the ring's width (radius 20, tube 3),
+   so dividing the widest block by it keeps every block inside the hole, plus 8rem of air */
+.clients__halo {
+    width: calc(100% / 0.74 + 8rem);
+    aspect-ratio: 52 / 34;
+}
+
+.clients__heading {
+    font-family: 'ITC Garamond Narrow', serif;
+    font-weight: 300;
+    font-size: 4.8rem;
+    line-height: 1;
+    letter-spacing: -0.05em;
+}
+
+.clients__title,
+.clients__lead,
+.clients__text {
+    font-family: 'Helvetica Now Display', sans-serif;
+    font-weight: 500;
+}
+
+.clients__title {
+    padding-bottom: 2.4rem;
+    font-size: 6rem;
+    line-height: 1;
+    letter-spacing: -0.03em;
+}
+
+.clients__lead {
+    padding-bottom: 4rem;
+    font-size: 2.4rem;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+}
+
+.clients__text {
+    font-size: max(1.6rem, 16px);
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+}

@@ -1,0 +1,74 @@
+.hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 14rem;
+    text-align: center;
+}
+
+.hero__headline {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    font-weight: inherit;
+}
+
+.hero__name {
+    font-family: 'Helvetica Now Display', sans-serif;
+    font-weight: 500;
+    font-size: 13.2rem;
+    line-height: 1;
+    letter-spacing: -0.05em;
+}
+
+.hero__tagline {
+    font-family: 'ITC Garamond Narrow', serif;
+    font-weight: 300;
+    font-size: 4rem;
+    line-height: 1;
+    letter-spacing: -0.03em;
+}
+
+/* Space the halo sits in. The 3D ring fits the inner box, see the `anchor` pose in HaloTimeline.js */
+.hero__offset {
+    padding: 8rem 0;
+}
+
+.hero__halo {
+    width: 24rem;
+    height: 12rem;
+}
+
+.hero__description {
+    font-family: 'ITC Garamond Narrow', serif;
+    font-weight: 300;
+    font-size: 10rem;
+    line-height: 0.85;
+    letter-spacing: -0.03em;
+}
+
+/* Each line is a reveal mask, the moving line inside it lays out words and media */
+.hero__line > .reveal-line {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Placeholder for the animated media between words */
+.hero__media {
+    width: 10rem;
+    height: 12rem;
+    margin: 0 3rem;
+    border-radius: 1.8rem;
+    background: #d9d9d9;
+}
+
+.hero__about {
+    padding-top: 10rem;
+    padding-bottom: 14rem;
+    font-family: 'ITC Garamond Narrow', serif;
+    font-weight: 300;
+    font-size: 2.8rem;
+    line-height: 1;
+    letter-spacing: -0.03em;
+}

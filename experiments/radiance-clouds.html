@@ -1,0 +1,597 @@
+<title>Radiance Clouds</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Single full-bleed daylight scene; deliberately one theme. */
+:root{ --bg:#ffffff; --ink:#24324a; --chip:rgba(255,255,255,.8); --chip-line:#d4dce8; }
+html,body{height:100%}
+body{background:var(--bg);overflow:hidden}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+.panel{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));right:max(12px,env(safe-area-inset-right,0px));width:min(260px,calc(100vw - 24px));
+  font:12px/1.3 "Helvetica Neue",Helvetica,Arial,sans-serif;color:var(--ink);background:var(--chip);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  border:1px solid var(--chip-line);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:9px}
+.panel[data-closed] .body{display:none}
+.panel .head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.panel h2{font-size:12px;font-weight:600;margin:0;letter-spacing:.02em}
+.panel .body{display:flex;flex-direction:column;gap:9px}
+.panel .grp{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#5d6b84;margin-top:4px}
+.panel label{display:grid;grid-template-columns:84px 1fr 40px;align-items:center;gap:8px}
+.panel output{font:500 11px ui-monospace,SFMono-Regular,Menlo,monospace;text-align:right;font-variant-numeric:tabular-nums}
+.panel input[type=range]{width:100%;accent-color:#3a5fae;min-width:0}
+.panel select,.panel input[type=number]{font:inherit;color:var(--ink);background:#fff;border:1px solid var(--chip-line);border-radius:5px;padding:3px 5px;min-width:0}
+.panel .row{display:flex;gap:6px}
+.panel button{font:500 11.5px "Helvetica Neue",Helvetica,Arial,sans-serif;color:var(--ink);background:#fff;border:1px solid var(--chip-line);border-radius:6px;padding:4px 9px;cursor:pointer}
+.panel button:focus-visible,.panel input:focus-visible,.panel select:focus-visible{outline:2px solid #3a5fae;outline-offset:1px}
+.fps{position:fixed;right:max(12px,env(safe-area-inset-right,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));
+  font:500 11px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--ink);background:var(--chip);
+  border:1px solid var(--chip-line);border-radius:6px;padding:4px 7px;font-variant-numeric:tabular-nums;pointer-events:none}
+</style>
+<canvas id="gl"></canvas>
+<div class="fps" id="fps">–</div>
+<div class="panel" id="panel">
+  <div class="head"><h2>Cloud controls</h2><button type="button" id="toggle">Hide</button></div>
+  <div class="body">
+    <div class="grp">Quality</div>
+    <label for="q-scale">Resolution <select id="q-scale"><option value="0.25">25%</option><option value="0.33" selected>33%</option><option value="0.5">50%</option><option value="0.75">75%</option><option value="1">100%</option></select><span></span></label>
+    <label for="q-steps">Step size <select id="q-steps"><option value="24">Coarse</option><option value="48" selected>Normal</option><option value="96">Fine</option></select><span></span></label>
+    <label for="q-rate">Cloud rate <select id="q-rate"><option value="1">Every frame</option><option value="2" selected>Every 2nd</option><option value="3">Every 3rd</option></select><span></span></label>
+    <label for="q-rays">Glow <select id="q-rays"><option value="1" selected>On</option><option value="0">Off</option></select><span></span></label>
+    <div class="grp">Shape &amp; light</div>
+    <label for="l-height">Cloud height <input id="l-height" type="range" min="0.12" max="0.8" step="0.01" value="0.3"><output id="o-height">30%</output></label>
+    <label for="l-back">Backlight <input id="l-back" type="range" min="0" max="1" step="0.01" value="0.6"><output id="o-back">0.60</output></label>
+    <label for="l-shadow">Shadow <input id="l-shadow" type="range" min="0" max="1" step="0.01" value="0.4"><output id="o-shadow">0.40</output></label>
+    <div class="grp">Seed</div>
+    <div class="row"><input id="s-seed" type="number" min="1" max="99999" value="7" aria-label="Seed" style="flex:1"><button type="button" id="s-rand">Random</button></div>
+    <div class="grp">Animation</div>
+    <label for="a-speed">Speed <input id="a-speed" type="range" min="0" max="4" step="0.05" value="1"><output id="o-speed">1.00</output></label>
+    <label for="a-morph">Morph every <input id="a-morph" type="range" min="2" max="10" step="0.1" value="4.5"><output id="o-morph">4.5s</output></label>
+    <label for="a-boil">Boil <input id="a-boil" type="range" min="0" max="3" step="0.05" value="1"><output id="o-boil">1.00</output></label>
+    <label for="a-wander">Puff wander <input id="a-wander" type="range" min="0" max="3" step="0.05" value="1"><output id="o-wander">1.00</output></label>
+    <label for="a-drift">Drift <input id="a-drift" type="range" min="0" max="4" step="0.05" value="1"><output id="o-drift">1.00</output></label>
+    <label for="a-beams">Beams <input id="a-beams" type="range" min="0" max="2.5" step="0.05" value="1"><output id="o-beams">1.00</output></label>
+    <label for="a-pulse">Light pulse <input id="a-pulse" type="range" min="0" max="3" step="0.05" value="1"><output id="o-pulse">1.00</output></label>
+    <div class="row"><button type="button" id="a-pause">Pause</button></div>
+  </div>
+</div>
+<script>
+(() => {
+const canvas = document.getElementById('gl'), fpsEl = document.getElementById('fps');
+const gl = canvas.getContext('webgl2', {antialias:false, alpha:false, depth:false, stencil:false, powerPreference:'high-performance'});
+if (!gl){ fpsEl.textContent = 'WebGL2 not available'; return; }
+
+/* ---------------- tunables ---------------- */
+const CFG = {
+  bufferScale: 0.33,     // cloud render resolution vs. canvas
+  stepScale: 48,         // 24 coarse, 48 normal, 96 fine
+  keyframe: 4.5,         // seconds per shape morph
+  slicesPerFrame: 4,     // background bake: 48 slices / 4 = 12 cloud frames per keyframe
+  cloudEvery: 2,         // redraw the cloud every Nth display frame (2 = 30 fps on a 60 Hz screen)
+  sun: [0.52, 0.3],
+  text: 'Radiance',
+  seed: 7, speed: 1, boil: 1, wander: 1, pulse: 1, rays: 1, paused: false, drift: 1, beams: 1, height: 0.3, back: 0.6, shadow: 0.4
+};
+
+/* ---------------- GL helpers ---------------- */
+function shader(type, src){ const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; }
+function program(vs, fs){
+  const p = gl.createProgram(); gl.attachShader(p, shader(gl.VERTEX_SHADER, vs)); gl.attachShader(p, shader(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(p);
+  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+  const u = {}; const n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS);
+  for (let i = 0; i < n; i++){ const info = gl.getActiveUniform(p, i); u[info.name.replace('[0]','')] = gl.getUniformLocation(p, info.name); }
+  return {p, u};
+}
+function tex2D(w, h, internal, format, type, data){
+  const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
+  gl.texImage2D(gl.TEXTURE_2D, 0, internal, w, h, 0, format, type, data);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  return t;
+}
+function tex3D(w, h, d, internal, format, wrap){
+  const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_3D, t);
+  gl.texImage3D(gl.TEXTURE_3D, 0, internal, w, h, d, 0, format, gl.UNSIGNED_BYTE, null);
+  for (const p of [gl.TEXTURE_WRAP_S, gl.TEXTURE_WRAP_T, gl.TEXTURE_WRAP_R]) gl.texParameteri(gl.TEXTURE_3D, p, wrap);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  return t;
+}
+function target(w, h){
+  const t = tex2D(w, h, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, null);
+  const f = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, f);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, t, 0);
+  return {t, f, w, h};
+}
+function freeTarget(x){ if (x){ gl.deleteTexture(x.t); gl.deleteFramebuffer(x.f); } }
+function bind(unit, t, kind = gl.TEXTURE_2D){ gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(kind, t); }
+function mulberry(a){ return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const bakeFb = gl.createFramebuffer();
+
+/* ---------------- GLSL ---------------- */
+const VS = `#version 300 es
+out vec2 vUv;
+void main(){ vec2 p = vec2((gl_VertexID << 1) & 2, gl_VertexID & 2); vUv = p; gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0); }`;
+const HEAD = `#version 300 es
+precision highp float;
+precision highp sampler3D;
+in vec2 vUv;
+out vec4 o;
+float ign(vec2 p){ return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715)))); }
+vec3 hash33(vec3 p){ p = fract(p * vec3(0.1031, 0.1030, 0.0973)); p += dot(p, p.yxz + 33.33); return fract((p.xxy + p.yxx) * p.zyx); }
+`;
+
+/* Scene: a horizontally repeating strip of puffs, PERIOD wide (in viewport heights), that scrolls left forever. */
+const NP = 24;
+const scaleFor = a => clamp(a / 2.2, 0.55, 1.35);
+const periodFor = a => 1.6 * a;
+// Height control: hk scales puff heights and sizes so the average cloud top lands at CFG.height (fraction of viewport).
+let hk = 1;
+function meanTop(a){
+  const sp = spheresAt(a, 0), P = periodFor(a), N = 256; let sum = 0;
+  for (let i = 0; i < N; i++){
+    const x = (i + 0.5) / N * P; let h = 0;
+    for (const s of sp){ let dx = x - s.x; dx -= P * Math.round(dx / P); if (Math.abs(dx) < s.r) h = Math.max(h, s.y + Math.sqrt(s.r * s.r - dx * dx)); }
+    sum += h;
+  }
+  return sum / N + 0.03;   // + typical lift from the surface lumps
+}
+function fitHeight(a){ hk = 1; hk = clamp(CFG.height / meanTop(a), 0.3, 4); }
+function spheresAt(a, tau){
+  const s = scaleFor(a), P = periodFor(a), rng = mulberry(CFG.seed * 7919 + 11), w = CFG.wander, k = hk, out = [];
+  for (let i = 0; i < NP; i++){
+    const tower = rng() < 0.2;                                   // occasional tall heads, otherwise a low bank
+    const fx = (i + 0.5 + (rng() - 0.5) * 0.7) / NP;
+    const r = (tower ? 0.15 + 0.06 * rng() : 0.12 + 0.06 * rng()) * s;
+    const fy = tower ? 0.06 + 0.12 * rng() : -0.05 + 0.08 * rng();
+    const z = (rng() - 0.5) * 0.24, ph = rng() * 6.283;
+    // each puff wanders, bobs and swells on its own slow cycle
+    out.push({
+      x: fx * P + Math.sin(tau * 0.045 + ph) * 0.025 * s * w,
+      y: fy * k + Math.sin(tau * 0.06 + ph * 1.7) * 0.018 * w * k,
+      z: z + Math.sin(tau * 0.05 + ph * 2.3) * 0.04 * w,
+      r: r * k * (1 + 0.07 * w * Math.sin(tau * 0.08 + ph * 3.1))
+    });
+  }
+  return out;
+}
+
+/* Shape + lighting volume (the slot a VDB fills).
+   One RGBA8 3D texture holds TWO keyframes: (R = distance, G = baked light) and (B = distance, A = baked light).
+   The visible shape cross-fades between the two pairs; when a fade completes, the next keyframe is baked
+   into the pair that just faded out (colorMask writes only those two channels), a few slices per cloud frame. */
+const VOL = [320, 112, 48], SDF_RANGE = 0.3, SIGMA = 70.0;
+const volProg = program(VS, HEAD + `
+uniform vec4 uS[24]; uniform float uZ, uTau, uP; uniform vec3 uSeedOff, uKey;
+float smin(float a, float b, float k){ float h = max(k - abs(a - b), 0.0) / k; return min(a, b) - h * h * k * 0.25; }
+// Worley F1, periodic in x over nx cells so the strip tiles seamlessly
+float F1(vec3 q, float nx){
+  vec3 i = floor(q); float md = 9.0;
+  for (int z = -1; z <= 1; z++) for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++){
+    vec3 c = i + vec3(x, y, z); vec3 h = vec3(mod(c.x, nx), c.yz);
+    vec3 d = q - c - hash33(h + 0.37); md = min(md, dot(d, d));
+  }
+  return sqrt(md);
+}
+float oct(vec3 p, float size, vec3 off){
+  float nx = max(1.0, floor(uP / size + 0.5));
+  return F1(p / vec3(uP / nx, size, size) + off, nx);
+}
+vec3 upOff(){ return vec3(0.12, -1.0, 0.25) * uTau + uSeedOff; }
+// coarse shape: balls + the big billow octave (used for the light march)
+float shapeLo(vec3 p){
+  float d = max(p.y - 0.05, abs(p.z) - 0.22);                     // low base layer so the bottom never opens up
+  for (int i = 0; i < 24; i++){
+    vec3 dp = p - uS[i].xyz; dp.x -= uP * floor(dp.x / uP + 0.5);  // wrapped distance: seamless repeat
+    d = smin(d, length(dp) - uS[i].w, 0.12);
+  }
+  return d + 0.13 * 0.9 * (oct(p, 0.13, upOff() * 0.035) - 0.55);
+}
+float densOf(float s){ return smoothstep(0.008, -0.025, s); }
+void main(){
+  vec3 uvw = vec3(gl_FragCoord.xy, uZ + 0.5) / vec3(${VOL[0]}.0, ${VOL[1]}.0, ${VOL[2]}.0);
+  vec3 p = vec3(uvw.x * uP, uvw.y * 1.3 - 0.1, uvw.z - 0.5);
+  vec3 up = upOff();
+  float d = shapeLo(p);
+  d += 0.045 * 0.8 * (oct(p, 0.045, 17.0 + up * 0.07) - 0.55);
+  d += 0.02 * 0.6 * (oct(p, 0.02, 31.0 + up * 0.12) - 0.55);
+  // OPTIMISATION 1: light is computed here, once per keyframe, instead of per pixel per frame
+  float od = 0.0, sl = 0.012; vec3 lp = p;
+  for (int j = 0; j < 6; j++){ lp += uKey * sl; od += densOf(shapeLo(lp)) * sl; sl *= 1.75; }
+  od *= ${SIGMA.toFixed(1)} * 0.6;
+  float E = exp(-od) + 0.6 * exp(-od * 0.25) + 0.35 * exp(-od * 0.06);   // multiple-scattering octaves (Wrenninge 2015)
+  float sd = clamp(d / ${SDF_RANGE} + 0.5, 0.0, 1.0), le = clamp(E * 0.5, 0.0, 1.0);
+  o = vec4(sd, le, sd, le);
+}`);
+
+/* Tileable 64³ noise. R, B, A: independent low-frequency value noise (warp + swell, one fetch). G: Worley fbm (edge erosion). */
+const noiseProg = program(VS, HEAD + `
+uniform float uZ;
+float worley(vec3 p, float c){
+  vec3 f = p * c, i = floor(f); float md = 9.0;
+  for (int z = -1; z <= 1; z++) for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++){
+    vec3 cell = i + vec3(x, y, z); vec3 d = f - (cell + hash33(mod(cell, c) + c * 7.0)); md = min(md, dot(d, d));
+  }
+  return min(1.0, sqrt(md));
+}
+float h3(vec3 q, float c, float s){ return hash33(mod(q, c) + c * 13.0 + s).x; }
+float value3(vec3 p, float c, float s){
+  vec3 f = p * c, i = floor(f), t = fract(f), u = t * t * (3.0 - 2.0 * t);
+  return mix(mix(mix(h3(i, c, s), h3(i + vec3(1,0,0), c, s), u.x), mix(h3(i + vec3(0,1,0), c, s), h3(i + vec3(1,1,0), c, s), u.x), u.y),
+             mix(mix(h3(i + vec3(0,0,1), c, s), h3(i + vec3(1,0,1), c, s), u.x), mix(h3(i + vec3(0,1,1), c, s), h3(i + vec3(1,1,1), c, s), u.x), u.y), u.z);
+}
+float lo(vec3 p, float s){ return 0.6 * value3(p, 4.0, s) + 0.4 * value3(p, 8.0, s); }
+void main(){
+  vec3 p = vec3(gl_FragCoord.xy, uZ + 0.5) / 64.0;
+  float hi = 1.0 - (0.625 * worley(p, 8.0) + 0.375 * worley(p, 16.0));
+  o = vec4(lo(p, 0.0), clamp((hi - 0.45) * 1.6 + 0.5, 0.0, 1.0), lo(p, 51.0), lo(p, 97.0));
+}`);
+
+/* Ray march. OPTIMISATION 2: runs on a quarter-size buffer; each texel is one pixel of a 2×2 block,
+   rotating through the block over 4 cloud frames (Schneider 2015 does 1-in-16). The resolve pass fills the rest from history. */
+const rmProg = program(VS, HEAD + `
+uniform sampler3D uV, uN; uniform sampler2D uPr;
+uniform float uA, uT, uFrame, uW, uSunGain, uBoil, uBack, uShadow, uP, uScroll;
+uniform vec2 uSun, uOff, uFull; uniform int uSteps;
+vec3 vt(vec3 p){ return vec3(p.x / uP, (p.y + 0.1) / 1.3, p.z + 0.5); }
+// OPTIMISATION 6: both keyframes in one texture -> one fetch gives distance and baked light, already cross-faded
+vec2 vol(vec3 p){ vec4 v = texture(uV, vt(p)); return vec2((mix(v.r, v.b, uW) - 0.5) * ${SDF_RANGE}, mix(v.g, v.a, uW) * 2.0); }
+float hg(float c, float g){ float g2 = g * g; return (1.0 - g2) / (12.566 * pow(1.0 + g2 - 2.0 * g * c, 1.5)); }
+void main(){
+  vec2 px = floor(gl_FragCoord.xy) * 2.0 + uOff;
+  vec2 uv = (px + 0.5) / uFull;
+  if (uv.x > 1.0 || uv.y > 1.0){ o = vec4(0.0); return; }
+  float wx = uv.x * uA + uScroll;                                    // position along the endless strip
+  if (uv.y > texture(uPr, vec2(wx / uP, 0.5)).r + 0.12){ o = vec4(0.0); return; }
+  vec3 ro = vec3(wx, uv.y, 0.5), rd = vec3(0.0, 0.0, -1.0);
+  float dt = 0.006 * 48.0 / float(uSteps);
+  float t = dt * fract(ign(px) + uFrame * 0.618034);
+  float T = 1.0; vec3 L = vec3(0.0);
+  vec3 sunW = vec3(uSun.x * uA + uScroll, uSun.y, -0.7);
+  vec3 keyL = normalize(mix(vec3(0.25, 1.0, 0.35), vec3(0.1, 0.5, -1.0), uBack));
+  float keyPhase = 1.0 + uBack * 1.3 * hg(dot(rd, keyL), 0.6) / hg(1.0, 0.6);
+  vec3 ambLo = mix(vec3(0.16, 0.32, 0.68), vec3(0.06, 0.14, 0.38), uShadow);
+  vec3 ambHi = mix(vec3(0.55, 0.68, 0.9), vec3(0.3, 0.42, 0.66), uShadow);
+  vec3 drift = vec3(uT * 0.012, -uT * 0.01, uT * 0.008);
+  for (int i = 0; i < 200; i++){
+    if (t > 1.0 || T < 0.01) break;
+    vec3 p = ro + rd * t;
+    vec2 v0 = vol(p);
+    if (v0.x > 0.04 + 0.03 * uBoil){ t += v0.x - 0.03 - 0.025 * uBoil; continue; }   // empty-space skip
+    // OPTIMISATION 5: boil warp + swell from ONE noise fetch (3 channels)
+    vec4 nz = texture(uN, p * 0.8 + drift);
+    vec3 q = p + (nz.rba - 0.5) * 0.045 * uBoil;
+    vec2 v = vol(q);
+    float s = v.x + (nz.b - 0.5) * 0.02 * uBoil;
+    if (s < 0.03) s += (0.5 - texture(uN, q * 5.0 + vec3(-uT * 0.01, -uT * 0.025, uT * 0.006)).g) * 0.011;
+    float d = smoothstep(0.008, -0.025, s);
+    if (d > 0.002){
+      float amb = clamp(0.5 + vol(p + vec3(0.0, 0.08, 0.04)).x * 8.0, 0.0, 1.0);
+      // silver lining: only the thin fringe (low density, right at the surface) lets the sun through,
+      // phase is normalised to 0..1 so the patch in front of the sun can't blow out to white
+      float fringe = (1.0 - d) * smoothstep(-0.03, 0.0, s);
+      float near = exp(-length(p.xy - sunW.xy) * 6.0);
+      float ph = hg(dot(rd, normalize(sunW - p)), 0.8) / hg(1.0, 0.8);
+      vec3 S = vec3(1.0, 0.98, 0.95) * v.y * 0.55 * keyPhase
+             + mix(ambLo, ambHi, amb) * 0.6
+             + vec3(1.0, 0.85, 0.62) * fringe * ph * near * 1.4 * uSunGain;
+      float st = exp(-d * ${SIGMA.toFixed(1)} * dt);
+      L += T * S * (1.0 - st);
+      T *= st;
+    }
+    t += dt;
+  }
+  float A = 1.0 - T;
+  L = (1.0 - exp(-L / max(A, 1e-4) * 2.0)) * A;
+  o = vec4(L, A);
+}`);
+
+/* Resolve: the full cloud buffer = this frame's new quarter of pixels + history shifted by whole pixels.
+   The scroll is quantised to cloud pixels, so history never gets resampled (no smear); the sub-pixel remainder
+   is applied at composite time. */
+const resolveProg = program(VS, HEAD + `
+uniform sampler2D uCur, uHist; uniform vec2 uOff, uFull; uniform int uShift; uniform float uReset;
+void main(){
+  ivec2 px = ivec2(gl_FragCoord.xy), src = px + ivec2(uShift, 0);
+  bool valid = uReset < 0.5 && src.x >= 0 && src.x < int(uFull.x);
+  vec4 prev = valid ? texelFetch(uHist, src, 0) : vec4(0.0);
+  ivec2 off = ivec2(uOff);
+  if ((px.x & 1) == off.x && (px.y & 1) == off.y){
+    vec4 n = texelFetch(uCur, px >> 1, 0);
+    o = valid ? mix(prev, n, 0.5) : n;                             // light temporal smoothing of the ray jitter
+  } else {
+    o = valid ? prev : texture(uCur, vUv);                          // no history yet: fill from neighbours
+  }
+}`);
+
+/* Light shafts: faint radial-blur glow + art-directed beams gated by gaps next to the sun. */
+const raysProg = program(VS, HEAD + `
+uniform sampler2D uCloud, uText; uniform vec2 uSun; uniform float uA, uGain, uT, uBeams, uGlow, uCShift;
+float hash12(vec2 p){ vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
+float vn(vec2 p){ vec2 i = floor(p), f = fract(p); vec2 u = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash12(i), hash12(i + vec2(1,0)), u.x), mix(hash12(i + vec2(0,1)), hash12(i + vec2(1,1)), u.x), u.y); }
+float cloudA(vec2 p){ return texture(uCloud, p + vec2(uCShift, 0.0)).a; }
+float sunMask(vec2 p){ vec2 d = (p - uSun) * vec2(uA, 1.0); float r = length(d); return exp(-r * r * 140.0) + exp(-r * 14.0) * 0.2; }
+float gapToward(vec2 dir){
+  float g = 0.0;
+  for (int k = 1; k <= 5; k++) g += 1.0 - cloudA(uSun + dir * vec2(1.0 / uA, 1.0) * (0.015 * float(k)));
+  return g / 5.0;
+}
+void main(){
+  float acc = 0.0;
+  if (uGlow > 0.0){
+    const int N = 24;
+    vec2 delta = (vUv - uSun) * (0.9 / float(N));
+    vec2 p = vUv - delta * ign(gl_FragCoord.xy);
+    float decay = 1.0;
+    for (int i = 0; i < N; i++){
+      p -= delta;
+      acc += sunMask(p) * (1.0 - cloudA(p)) * (1.0 - texture(uText, p).a * 0.9) * decay;
+      decay *= 0.94;
+    }
+    acc *= 1.6;
+  }
+  vec2 d = (vUv - uSun) * vec2(uA, 1.0);
+  float r = length(d); vec2 dir = d / max(r, 1e-4);
+  float t = uT;
+  float n = vn(dir * 2.5 + vec2(t * 0.045, -t * 0.035)) * 0.55
+          + vn(dir * 6.0 + vec2(-t * 0.06, t * 0.05) + 11.0) * 0.3
+          + vn(dir * 14.0 + vec2(t * 0.09, t * 0.05) + 23.0) * 0.15;
+  float beam = smoothstep(0.4, 0.72, n); beam *= beam;
+  beam *= 0.65 + 0.35 * vn(dir * 45.0 + 5.0);
+  beam *= mix(0.3, 1.0, smoothstep(0.05, 0.55, gapToward(dir)));
+  beam *= mix(0.35, 1.0, smoothstep(0.4, -0.5, dir.y));
+  float radial = smoothstep(0.015, 0.1, r) * exp(-r * 1.5);
+  float dust = 0.82 + 0.18 * vn(dir * 9.0 + vec2(r * 9.0 - t * 0.3));
+  o = vec4(vec3((acc * 0.025 * uGlow + beam * radial * dust * uBeams * 1.1) * uGain), 1.0);
+}`);
+
+/* Composite. OPTIMISATION 3: the low-res cloud is upsampled with an edge-aware 5-tap filter
+   (taps that differ a lot from the centre get less weight), so it is smooth without smearing the silhouette. */
+const compProg = program(VS, HEAD + `
+uniform sampler2D uCloud, uText, uRays; uniform vec2 uSun, uCTexel; uniform float uA, uSunGain, uCShift;
+void main(){
+  vec2 uv = vUv;
+  vec3 col = mix(vec3(0.93, 0.95, 0.98), vec3(1.0), smoothstep(0.0, 0.9, uv.y));
+  float ta = texture(uText, uv).a;
+  float sd = length((uv - uSun) * vec2(uA, 1.0));
+  float warm = exp(-sd * 4.0) * smoothstep(0.45, 0.28, uv.y) * uSunGain;
+  vec3 tcol = mix(vec3(0.05, 0.05, 0.06), vec3(0.66, 0.44, 0.22), clamp(warm * 1.6, 0.0, 1.0));
+  col = mix(col, tcol, ta);
+  col += vec3(1.0, 0.93, 0.82) * exp(-sd * sd * 160.0) * 0.45 * uSunGain * (1.0 - ta);
+  vec2 cuv = uv + vec2(uCShift, 0.0);
+  vec4 c0 = texture(uCloud, cuv), acc = c0; float ws = 1.0;
+  for (int k = 0; k < 4; k++){
+    vec2 o2 = vec2((k & 1) == 0 ? -0.75 : 0.75, k < 2 ? -0.75 : 0.75) * uCTexel;
+    vec4 c = texture(uCloud, cuv + o2);
+    float w = exp(-abs(c.a - c0.a) * 6.0 - length(c.rgb - c0.rgb) * 5.0);
+    acc += c * w; ws += w;
+  }
+  vec4 c = acc / ws;
+  col = col * (1.0 - c.a) + c.rgb;
+  col = 1.0 - (1.0 - col) * (1.0 - clamp(vec3(1.0, 0.92, 0.8) * texture(uRays, uv).rgb, 0.0, 1.0));   // screen blend
+  col += (ign(gl_FragCoord.xy) - 0.5) / 255.0;
+  o = vec4(clamp(col, 0.0, 1.0), 1.0);
+}`);
+
+/* ---------------- resources ---------------- */
+const vao = gl.createVertexArray(); gl.bindVertexArray(vao);
+const noiseTex = tex3D(64, 64, 64, gl.RGBA8, gl.RGBA, gl.REPEAT);
+gl.bindFramebuffer(gl.FRAMEBUFFER, bakeFb); gl.viewport(0, 0, 64, 64); gl.useProgram(noiseProg.p);
+for (let z = 0; z < 64; z++){ gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, noiseTex, 0, z); gl.uniform1f(noiseProg.u.uZ, z); gl.drawArrays(gl.TRIANGLES, 0, 3); }
+
+const volTex = tex3D(VOL[0], VOL[1], VOL[2], gl.RGBA8, gl.RGBA, gl.CLAMP_TO_EDGE);
+gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_S, gl.REPEAT);            // x wraps: infinite strip
+const key = {k: 0, phase: 'fade', clock: 0, job: null};
+function keyDir(){ // must match the shader's keyL
+  const b = CFG.back, x = 0.25 + (0.1 - 0.25) * b, y = 1 + (0.5 - 1) * b, z = 0.35 + (-1 - 0.35) * b, l = Math.hypot(x, y, z);
+  return [x / l, y / l, z / l];
+}
+function makeJob(pair, tau, a){
+  const u = new Float32Array(NP * 4);
+  spheresAt(a, tau).forEach((s, i) => u.set([s.x, s.y, s.z, s.r], i * 4));
+  return {pair, tau, z: 0, u};
+}
+function bakeSlices(job, a, n){
+  gl.bindFramebuffer(gl.FRAMEBUFFER, bakeFb); gl.viewport(0, 0, VOL[0], VOL[1]);
+  gl.useProgram(volProg.p);
+  gl.uniform4fv(volProg.u.uS, job.u); gl.uniform1f(volProg.u.uTau, job.tau); gl.uniform1f(volProg.u.uP, periodFor(a));
+  gl.uniform3fv(volProg.u.uKey, keyDir());
+  const sr = mulberry(CFG.seed); gl.uniform3f(volProg.u.uSeedOff, sr() * 100, sr() * 100, sr() * 100);
+  gl.colorMask(job.pair === 0, job.pair === 0, job.pair === 1, job.pair === 1);
+  for (let k = 0; k < n && job.z < VOL[2]; k++, job.z++){
+    gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, volTex, 0, job.z);
+    gl.uniform1f(volProg.u.uZ, job.z); gl.drawArrays(gl.TRIANGLES, 0, 3);
+  }
+  gl.colorMask(true, true, true, true);
+  return job.z >= VOL[2];
+}
+function resetKeys(a){
+  bakeSlices(makeJob(0, 0, a), a, VOL[2]);
+  bakeSlices(makeJob(1, CFG.keyframe, a), a, VOL[2]);
+  key.k = 0; key.phase = 'fade'; key.clock = 0; key.job = null;
+}
+// weight of pair 1 in the cross-fade
+function pairWeight(){
+  const f = key.phase === 'bake' ? 1 : clamp(key.clock / CFG.keyframe), e = f * f * (3 - 2 * f);
+  return key.k % 2 === 0 ? e : 1 - e;
+}
+// OPTIMISATION 7: the background bake only runs on cloud frames, 4 slices at a time (48 slices -> 12 cloud frames),
+// and only in the short gap after a fade completes.
+function stepKeys(a, dtAnim){
+  if (key.phase === 'fade'){
+    key.clock += dtAnim;
+    if (key.clock >= CFG.keyframe){
+      key.phase = 'bake';
+      key.job = makeJob(key.k % 2, (key.k + 2) * CFG.keyframe, a);   // the pair that just faded out
+    }
+  }
+  if (key.phase === 'bake' && bakeSlices(key.job, a, CFG.slicesPerFrame)){
+    key.k++; key.phase = 'fade'; key.clock = 0; key.job = null;
+  }
+}
+
+let profile = null, profileTex = null;
+function buildProfile(a){
+  // conservative cloud-top envelope, used only to skip pixels that are clearly sky
+  const sp = spheresAt(a, 0), PW = 1024, P = periodFor(a); profile = new Float32Array(PW);
+  for (let i = 0; i < PW; i++){
+    const x = (i + 0.5) / PW * P; let h = 0.08;
+    for (const s of sp){ const r = s.r * 1.2; let dx = x - s.x; dx -= P * Math.round(dx / P); if (Math.abs(dx) < r) h = Math.max(h, s.y + 0.03 + Math.sqrt(r * r - dx * dx)); }
+    profile[i] = h;
+  }
+  const tmp = new Float32Array(PW);
+  for (let pass = 0; pass < 3; pass++){
+    for (let i = 0; i < PW; i++){ let m = 0; for (let k = -8; k <= 8; k++) m = Math.max(m, profile[(i + k + PW) % PW]); tmp[i] = m; }
+    profile.set(tmp);
+  }
+  if (profileTex) gl.deleteTexture(profileTex);
+  profileTex = tex2D(PW, 1, gl.R16F, gl.RED, gl.FLOAT, profile);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+}
+
+const textCanvas = document.createElement('canvas');
+let textTex = null;
+function buildText(W, H){
+  textCanvas.width = W; textCanvas.height = H;
+  const c = textCanvas.getContext('2d'); c.clearRect(0, 0, W, H);
+  let fs = H * 0.2;
+  const font = s => `500 ${s}px "Helvetica Neue", Helvetica, Arial, sans-serif`;
+  c.font = font(fs);
+  const w = c.measureText(CFG.text).width, maxW = W * 0.62;
+  if (w > maxW){ fs *= maxW / w; c.font = font(fs); }
+  c.fillStyle = '#000'; c.fillText(CFG.text, W * 0.19, H * 0.715);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+  if (textTex) gl.deleteTexture(textTex);
+  textTex = tex2D(W, H, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, textCanvas);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+}
+
+/* ---------------- frame ---------------- */
+let scroll = 0, W = 0, H = 0, hist = [null, null], cur = null, raysT = null, latest = null;
+let cloudFrame = 0, displayFrame = 0, histReset = true, cloudScrollQ = 0, pendAnim = 0;
+let simT = 0, last = 0, fpsEma = 60, lastStat = 0, running = true;
+const BAYER = [[0, 0], [1, 1], [1, 0], [0, 1]];
+function resize(){
+  const dpr = Math.min(devicePixelRatio || 1, 2);
+  const w = Math.max(2, Math.round(innerWidth * dpr)), h = Math.max(2, Math.round(innerHeight * dpr));
+  if (w === W && h === H) return;
+  W = w; H = h; canvas.width = W; canvas.height = H;
+  buildText(W, H); rebuildScene(); rebuildTargets();
+}
+function rebuildScene(){ const a = W / H; fitHeight(a); buildProfile(a); resetKeys(a); histReset = true; }
+function rebuildTargets(){
+  const cw = Math.max(2, Math.round(W * CFG.bufferScale)), ch = Math.max(2, Math.round(H * CFG.bufferScale));
+  freeTarget(hist[0]); freeTarget(hist[1]); hist = [target(cw, ch), target(cw, ch)];
+  freeTarget(cur); cur = target(Math.ceil(cw / 2), Math.ceil(ch / 2));
+  freeTarget(raysT); raysT = target(Math.max(1, W >> 1), Math.max(1, H >> 1));
+  histReset = true;
+}
+
+function frame(now){
+  if (!running) return;
+  requestAnimationFrame(frame);
+  const dt = last ? Math.min(0.1, (now - last) / 1000) : 0; last = now;
+  const animDt = CFG.paused ? 0 : dt * CFG.speed;
+  simT += animDt; pendAnim += animDt;
+  scroll += animDt * CFG.drift * 0.035;                         // leftward drift, viewport heights per second
+  fpsEma += ((dt > 0 ? 1 / dt : 60) - fpsEma) * 0.05;
+  resize();
+  const a = W / H, P = periodFor(a);
+
+  // the light breathes: slow drift and swell of the sun behind the cloud
+  const pl = CFG.pulse;
+  const sunY = clamp(CFG.height, 0.15, 0.85);
+  const sun = [CFG.sun[0] + Math.sin(simT * 0.11) * 0.012 * pl, sunY + Math.sin(simT * 0.083 + 1.3) * 0.008 * pl];
+  const sunGain = 1 + (0.12 * Math.sin(simT * 0.37) + 0.05 * Math.sin(simT * 1.13)) * pl;
+  gl.bindVertexArray(vao);
+
+  // OPTIMISATION 4: the cloud itself updates every Nth display frame; beams and composite run every frame
+  if (histReset || displayFrame % CFG.cloudEvery === 0){
+    stepKeys(a, pendAnim); pendAnim = 0;
+    const out = hist[cloudFrame & 1], prev = hist[(cloudFrame + 1) & 1];
+    const pxW = a / out.w, q = Math.floor(scroll / pxW) * pxW;   // scroll snapped to whole cloud pixels
+    const shiftPx = histReset ? 0 : Math.round((q - cloudScrollQ) / pxW);
+    cloudScrollQ = q;
+    const off = BAYER[cloudFrame % 4];
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, cur.f); gl.viewport(0, 0, cur.w, cur.h);
+    gl.useProgram(rmProg.p);
+    bind(0, volTex, gl.TEXTURE_3D); gl.uniform1i(rmProg.u.uV, 0);
+    bind(1, noiseTex, gl.TEXTURE_3D); gl.uniform1i(rmProg.u.uN, 1);
+    bind(2, profileTex); gl.uniform1i(rmProg.u.uPr, 2);
+    gl.uniform1f(rmProg.u.uA, a); gl.uniform1f(rmProg.u.uT, simT); gl.uniform1f(rmProg.u.uFrame, cloudFrame % 64);
+    gl.uniform1f(rmProg.u.uW, pairWeight()); gl.uniform1f(rmProg.u.uSunGain, sunGain); gl.uniform1f(rmProg.u.uBoil, CFG.boil);
+    gl.uniform1f(rmProg.u.uBack, CFG.back); gl.uniform1f(rmProg.u.uShadow, CFG.shadow);
+    gl.uniform1f(rmProg.u.uP, P); gl.uniform1f(rmProg.u.uScroll, q % P);
+    gl.uniform2fv(rmProg.u.uSun, sun); gl.uniform2f(rmProg.u.uOff, off[0], off[1]); gl.uniform2f(rmProg.u.uFull, out.w, out.h);
+    gl.uniform1i(rmProg.u.uSteps, CFG.stepScale);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, out.f); gl.viewport(0, 0, out.w, out.h);
+    gl.useProgram(resolveProg.p);
+    bind(0, cur.t); gl.uniform1i(resolveProg.u.uCur, 0);
+    bind(1, prev.t); gl.uniform1i(resolveProg.u.uHist, 1);
+    gl.uniform2f(resolveProg.u.uOff, off[0], off[1]); gl.uniform2f(resolveProg.u.uFull, out.w, out.h);
+    gl.uniform1i(resolveProg.u.uShift, shiftPx); gl.uniform1f(resolveProg.u.uReset, histReset ? 1 : 0);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    histReset = false; cloudFrame++; latest = out;
+  }
+  displayFrame++;
+  const cShift = (scroll - cloudScrollQ) / a;                    // sub-pixel remainder of the scroll, in uv
+
+  gl.bindFramebuffer(gl.FRAMEBUFFER, raysT.f); gl.viewport(0, 0, raysT.w, raysT.h);
+  gl.useProgram(raysProg.p);
+  bind(0, latest.t); gl.uniform1i(raysProg.u.uCloud, 0);
+  bind(1, textTex); gl.uniform1i(raysProg.u.uText, 1);
+  gl.uniform2fv(raysProg.u.uSun, sun); gl.uniform1f(raysProg.u.uA, a); gl.uniform1f(raysProg.u.uGain, sunGain);
+  gl.uniform1f(raysProg.u.uT, simT); gl.uniform1f(raysProg.u.uBeams, CFG.beams); gl.uniform1f(raysProg.u.uGlow, CFG.rays);
+  gl.uniform1f(raysProg.u.uCShift, cShift);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, W, H);
+  gl.useProgram(compProg.p);
+  bind(0, latest.t); gl.uniform1i(compProg.u.uCloud, 0);
+  bind(1, textTex); gl.uniform1i(compProg.u.uText, 1);
+  bind(2, raysT.t); gl.uniform1i(compProg.u.uRays, 2);
+  gl.uniform2fv(compProg.u.uSun, sun); gl.uniform1f(compProg.u.uA, a); gl.uniform1f(compProg.u.uSunGain, sunGain);
+  gl.uniform1f(compProg.u.uCShift, cShift); gl.uniform2f(compProg.u.uCTexel, 1 / latest.w, 1 / latest.h);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+  if (now - lastStat > 500){ lastStat = now; fpsEl.textContent = `${Math.round(fpsEma)} fps · cloud ${latest.w}×${latest.h}`; }
+}
+
+/* ---------------- controls ---------------- */
+const $ = id => document.getElementById(id);
+const panel = $('panel');
+$('toggle').addEventListener('click', () => { const c = panel.toggleAttribute('data-closed'); $('toggle').textContent = c ? 'Show' : 'Hide'; });
+$('q-scale').addEventListener('change', e => { CFG.bufferScale = +e.target.value; rebuildTargets(); });
+$('q-steps').addEventListener('change', e => { CFG.stepScale = +e.target.value; histReset = true; });
+$('q-rays').addEventListener('change', e => { CFG.rays = +e.target.value; });
+$('q-rate').addEventListener('change', e => { CFG.cloudEvery = +e.target.value; });
+function setSeed(v){ CFG.seed = clamp(Math.round(v) || 1, 1, 99999); $('s-seed').value = CFG.seed; rebuildScene(); }
+$('s-seed').addEventListener('change', e => setSeed(+e.target.value));
+$('s-rand').addEventListener('click', () => setSeed(1 + Math.floor(Math.random() * 99999)));
+const slider = (id, key, fmt, after) => {
+  const el = $(id), out = $('o' + id.slice(id.indexOf('-')));
+  el.addEventListener('input', () => { CFG[key] = +el.value; out.textContent = fmt(CFG[key]); });
+  if (after) el.addEventListener('change', after);   // shape rebakes only when the drag ends
+};
+slider('a-speed', 'speed', v => v.toFixed(2));
+slider('a-morph', 'keyframe', v => v.toFixed(1) + 's');
+slider('a-boil', 'boil', v => v.toFixed(2));
+slider('a-wander', 'wander', v => v.toFixed(2), () => rebuildScene());
+slider('a-pulse', 'pulse', v => v.toFixed(2));
+slider('a-drift', 'drift', v => v.toFixed(2));
+slider('a-beams', 'beams', v => v.toFixed(2));
+slider('l-height', 'height', v => Math.round(v * 100) + '%', () => rebuildScene());
+slider('l-back', 'back', v => v.toFixed(2), () => rebuildScene());   // light is baked, so re-bake on release
+slider('l-shadow', 'shadow', v => v.toFixed(2));
+$('a-pause').addEventListener('click', e => { CFG.paused = !CFG.paused; e.target.textContent = CFG.paused ? 'Play' : 'Pause'; });
+
+// stop rendering when the tab is hidden (in a real footer: also when it scrolls out of view)
+document.addEventListener('visibilitychange', () => {
+  running = !document.hidden;
+  if (running){ last = 0; requestAnimationFrame(frame); }
+});
+requestAnimationFrame(frame);
+})();
+</script>

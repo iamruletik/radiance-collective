@@ -1,0 +1,123 @@
+{
+  "stage": {
+    "fov": 75,
+    "cameraHeight": 100,
+    "maxPixelRatio": 2,
+    "parallaxStrength": 2,
+    "parallaxSmoothing": 3
+  },
+  "scroll": {
+    "lerp": 0.1,
+    "wheelMultiplier": 1,
+    "touchMultiplier": 1
+  },
+  "preloader": {
+    "minSilhouette": 2.2,
+    "spinSpeed": 1.6,
+    "spinSettleTurns": 1,
+    "startScale": 0.85,
+    "scaleDuration": 1,
+    "revealDuration": 2.5,
+    "shader": {
+      "edgeColor": "#ffb852",
+      "edgeIntensity": 1.6,
+      "edgeWidth": 0.07,
+      "edgeSoftness": 0.04,
+      "noiseScale": 5,
+      "noiseSpeed": 0.6,
+      "noiseStrength": 0.3
+    }
+  },
+  "clouds": {
+    "bufferScale": 0.33,
+    "steps": 48,
+    "cloudEvery": 2,
+    "glow": true,
+    "keyframeSeconds": 4.5,
+    "slicesPerFrame": 4,
+    "seed": 7,
+    "speed": 1,
+    "drift": 1,
+    "boil": 1,
+    "wander": 1,
+    "pulse": 1,
+    "beams": 1,
+    "cloudHeight": 0.3,
+    "back": 0.6,
+    "shadow": 0.4,
+    "sunX": 0.52
+  },
+  "transition": {
+    "duration": 0.4,
+    "ease": "easeInOut"
+  },
+  "halo": {
+    "matcap": "gold0",
+    "color": "#ffffff",
+    "radius": 20,
+    "tube": 3,
+    "radialSegments": 64,
+    "tubularSegments": 100,
+    "relief": "dent",
+    "reliefScale": 4,
+    "reliefBevel": 4,
+    "reliefSoftness": 2,
+    "reliefCenter": 0.75,
+    "reliefBand": 0.3333
+  },
+  "haloTimeline": {
+    "smoothing": 8,
+    "idleAmplitude": 0.12,
+    "idlePeriod": 3,
+    "poses": {
+      "rest": { "rotationX": 0.3927, "anchor": "hero" },
+      "near": { "rotationX": 0.1, "positionY": 85, "positionZ": 10 },
+      "logo": { "rotationX": 0.29, "anchor": "header" },
+      "clients": { "rotationX": 0, "anchor": "clients" }
+    },
+    "timelines": {
+      "home": [
+        { "scroll": 0, "pose": "rest", "spinTurns": 0 },
+        { "scroll": 0.25, "pose": "rest", "spinTurns": 0 },
+        { "scroll": 0.75, "pose": "rest", "spinTurns": 1 },
+        { "section": "clients", "scroll": 0, "pose": "rest", "spinTurns": 1 },
+        { "section": "clients", "scroll": 0.4, "pose": "clients", "spinTurns": 1 },
+        { "section": "clients", "scroll": 12.1, "pose": "clients", "spinTurns": 3.925, "easing": "linear" },
+        { "section": "clients", "scroll": 12.5, "pose": "near", "spinTurns": 4 },
+        { "section": "clients", "scroll": 17.3, "pose": "near", "spinTurns": 4 },
+        { "section": "clients", "scroll": 18.1, "pose": "logo", "spinTurns": 4 }
+      ],
+      "header": [
+        { "scroll": 0, "pose": "logo", "spinTurns": 4 }
+      ]
+    }
+  },
+  "clients": {
+    "showAt": 0.1,
+    "hideAt": 0.75
+  },
+  "reveal": {
+    "rise": 150,
+    "blur": 12,
+    "duration": 1.4,
+    "stagger": 0.1,
+    "outDuration": 0.5,
+    "outStagger": 0.05,
+    "cascade": 0.15
+  },
+  "haloSlider": {
+    "panelCount": 9,
+    "panelGap": 0.04,
+    "panelSegments": 16,
+    "height": 10,
+    "offset": 0.5,
+    "expand": 1.6,
+    "expandSmoothing": 8,
+    "flipX": true,
+    "flipY": true,
+    "section": "clients",
+    "fadeIn": { "start": 12.5, "end": 13 },
+    "fadeOut": { "start": 17, "end": 17.3 },
+    "reliefIn": { "start": 12.5, "end": 15 }
+  }
+}

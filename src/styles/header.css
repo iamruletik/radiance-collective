@@ -1,0 +1,49 @@
+/* Figma letter spacing in % is em here, so it scales with the font size */
+.header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: var(--layer-header);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 2.4rem 2.4rem 0;
+}
+
+.header__logo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.header__name {
+    font-family: 'Helvetica Now Display', sans-serif;
+    font-weight: 500;
+    font-size: 2.4rem;
+    line-height: 1;
+    letter-spacing: -0.05em;
+}
+
+.header__tagline,
+.header__menu {
+    font-family: 'ITC Garamond Narrow', serif;
+    font-weight: 300;
+    font-size: 2rem;
+    line-height: 1;
+    letter-spacing: -0.03em;
+}
+
+.header__tagline {
+    padding-left: 4rem;
+}
+
+/* Reserved spot the 3D halo fits into on pages other than home, see the `anchor` pose in HaloTimeline.js */
+.header__halo {
+    position: absolute;
+    top: 2.4rem;
+    left: 50%;
+    width: 11.2rem;
+    height: 4.6rem;
+    transform: translateX(-50%);
+}

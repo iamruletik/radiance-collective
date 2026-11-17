@@ -1,16 +1,99 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="is-loading">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Radiance Collective</title>
-    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/src/styles/base.css">
 </head>
 <body>
-    <div class="canvas_container">
-        <canvas class="webgl"></canvas>
-    </div>
-    <div class="scroll_spacer"></div>
-    <script type="module" src="/main.js"></script>
+    <canvas class="webgl"></canvas>
+
+    <!-- include: src/partials/header.html -->
+
+    <main data-taxi>
+        <div class="home" data-taxi-view data-page="home">
+            <section class="hero" data-component="intro">
+                <h1 class="hero__headline" data-reveal>
+                    <span class="hero__name" data-line>Radiance</span>
+                    <span class="hero__tagline" data-line>Design Collective</span>
+                </h1>
+
+                <div class="hero__offset" aria-hidden="true">
+                    <div class="hero__halo" data-halo-anchor="hero"></div>
+                </div>
+
+                <p class="hero__description" data-reveal>
+                    <span class="hero__line" data-line>branding</span>
+                    <span class="hero__line" data-line>&amp; digital.</span>
+                    <span class="hero__line" data-line>we ask questions,</span>
+                    <span class="hero__line" data-line>explore <span class="hero__media" aria-hidden="true"></span> deeply,</span>
+                    <span class="hero__line" data-line>and create</span>
+                    <span class="hero__line" data-line><span class="hero__media" aria-hidden="true"></span> together</span>
+                </p>
+
+                <div class="hero__about" data-reveal>
+                    <a href="/about"><span data-line>(About us) →</span></a>
+                </div>
+            </section>
+
+            <section class="showreel" data-component="showreel">
+                <video class="showreel__video" src="https://storage.googleapis.com/radiance/showreel26.mp4" muted loop playsinline preload="auto" disablepictureinpicture></video>
+            </section>
+
+            <section class="clients" data-component="clients" data-halo-section="clients">
+                <div class="clients__stage">
+                    <div class="clients__halo" data-halo-anchor="clients" aria-hidden="true"></div>
+
+                    <div class="clients__item" data-reveal>
+                        <h2 class="clients__heading"><span data-line>Who we work with?</span></h2>
+                    </div>
+
+                    <div class="clients__item" data-reveal>
+                        <h3 class="clients__title"><span data-line>Startups</span></h3>
+                        <p class="clients__lead"><span data-line>Moving fast without</span><span data-line>cutting corners.</span></p>
+                        <p class="clients__text">
+                            <span data-line>You need to move quickly, test ideas, and make</span>
+                            <span data-line>every decision count. We help turn an early</span>
+                            <span data-line>vision into a clear brand and digital product,</span>
+                            <span data-line>building the right foundation without</span>
+                            <span data-line>unnecessary complexity.</span>
+                        </p>
+                    </div>
+
+                    <div class="clients__item" data-reveal>
+                        <h3 class="clients__title"><span data-line>Growing</span><span data-line>companies</span></h3>
+                        <p class="clients__lead"><span data-line>Making the next step</span><span data-line>feel like one.</span></p>
+                        <p class="clients__text">
+                            <span data-line>As companies grow, brands and products</span>
+                            <span data-line>often grow in different directions. We help</span>
+                            <span data-line>bring them back together, rethink what no</span>
+                            <span data-line>longer works, and build systems ready for</span>
+                            <span data-line>what comes next.</span>
+                        </p>
+                    </div>
+
+                    <div class="clients__item" data-reveal>
+                        <h3 class="clients__title"><span data-line>Established</span><span data-line>brands</span></h3>
+                        <p class="clients__lead"><span data-line>Finding what’s next..</span></p>
+                        <p class="clients__text">
+                            <span data-line>We help companies rethink how they look,</span>
+                            <span data-line>communicate, and behave digitally, without</span>
+                            <span data-line>losing what made them recognizable</span>
+                            <span data-line>in the first place.</span>
+                        </p>
+                    </div>
+
+                    <div class="clients__item" data-reveal>
+                        <h2 class="clients__heading"><span data-line>A few ideas that became real things</span></h2>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer class="footer"></footer>
+
+    <script type="module" src="/src/main.js"></script>
 </body>
 </html>
