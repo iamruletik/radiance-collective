@@ -1,6 +1,6 @@
 {
   "stage": {
-    "lens": 200,
+    "lens": 67,
     "cameraHeight": 100,
     "maxPixelRatio": 2,
     "parallaxStrength": 2,
@@ -64,8 +64,8 @@
   "halo": {
     "matcap": "gold0",
     "color": "#ffffff",
-    "radius": 20,
-    "tube": 3,
+    "radius": 24,
+    "tube": 4.1,
     "radialSegments": 64,
     "tubularSegments": 100,
     "relief": "dent",
@@ -80,25 +80,86 @@
     "idleAmplitude": 0.12,
     "idlePeriod": 3,
     "poses": {
-      "rest": { "rotationX": 0.3927, "anchor": "hero" },
-      "near": { "rotationX": 0.1, "positionY": 85, "positionZ": 10, "lens": 16 },
-      "logo": { "rotationX": 0.29, "anchor": "header" },
-      "clients": { "rotationX": 0, "anchor": "clients" }
+      "rest": {
+        "rotationX": 0.3927,
+        "anchor": "hero"
+      },
+      "near": {
+        "rotationX": 0.1,
+        "positionY": 85,
+        "positionZ": 10,
+        "lens": 16
+      },
+      "logo": {
+        "rotationX": 0.29,
+        "anchor": "header"
+      },
+      "clients": {
+        "rotationX": 0,
+        "anchor": "clients"
+      }
     },
     "timelines": {
       "home": [
-        { "scroll": 0, "pose": "rest", "spinTurns": 0 },
-        { "scroll": 0.25, "pose": "rest", "spinTurns": 0 },
-        { "scroll": 0.75, "pose": "rest", "spinTurns": 1 },
-        { "section": "clients", "scroll": 0, "pose": "rest", "spinTurns": 1 },
-        { "section": "clients", "scroll": 0.4, "pose": "clients", "spinTurns": 1 },
-        { "section": "clients", "scroll": 12.1, "pose": "clients", "spinTurns": 3.925, "easing": "linear" },
-        { "section": "clients", "scroll": 12.5, "pose": "near", "spinTurns": 4 },
-        { "section": "clients", "scroll": 17.3, "pose": "near", "spinTurns": 4 },
-        { "section": "clients", "scroll": 18.1, "pose": "logo", "spinTurns": 4 }
+        {
+          "scroll": 0,
+          "pose": "rest",
+          "spinTurns": 0
+        },
+        {
+          "scroll": 0.25,
+          "pose": "rest",
+          "spinTurns": 0
+        },
+        {
+          "scroll": 0.75,
+          "pose": "rest",
+          "spinTurns": 1
+        },
+        {
+          "section": "clients",
+          "scroll": 0,
+          "pose": "rest",
+          "spinTurns": 1
+        },
+        {
+          "section": "clients",
+          "scroll": 0.4,
+          "pose": "clients",
+          "spinTurns": 1
+        },
+        {
+          "section": "clients",
+          "scroll": 12.1,
+          "pose": "clients",
+          "spinTurns": 3.925,
+          "easing": "linear"
+        },
+        {
+          "section": "clients",
+          "scroll": 12.5,
+          "pose": "near",
+          "spinTurns": 4
+        },
+        {
+          "section": "clients",
+          "scroll": 17.3,
+          "pose": "near",
+          "spinTurns": 4
+        },
+        {
+          "section": "clients",
+          "scroll": 18.1,
+          "pose": "logo",
+          "spinTurns": 4
+        }
       ],
       "header": [
-        { "scroll": 0, "pose": "logo", "spinTurns": 4 }
+        {
+          "scroll": 0,
+          "pose": "logo",
+          "spinTurns": 4
+        }
       ]
     }
   },
@@ -126,8 +187,17 @@
     "flipX": true,
     "flipY": true,
     "section": "clients",
-    "fadeIn": { "start": 12.5, "end": 13 },
-    "fadeOut": { "start": 17, "end": 17.3 },
-    "reliefIn": { "start": 12.5, "end": 15 }
+    "fadeIn": {
+      "start": 12.5,
+      "end": 13
+    },
+    "fadeOut": {
+      "start": 17,
+      "end": 17.3
+    },
+    "reliefIn": {
+      "start": 12.5,
+      "end": 15
+    }
   }
 }

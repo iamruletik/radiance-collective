@@ -127,12 +127,13 @@ export default class Debug {
         this.fps = this.pane.addBlade({ view: 'fpsgraph', label: 'FPS', rows: 2 })
         this.pane.addBinding(modules.stage, 'backend', { readonly: true, label: 'Backend' })
         this.pane.addButton({ title: 'Replay Preloader' }).on('click', () => modules.preloader.play())
+        this.pane.addButton({ title: 'Save As Default' }).on('click', () => this.saveDefault())
+        this.pane.addButton({ title: 'Reset To Default' }).on('click', () => { localStorage.removeItem(STORAGE_KEY); location.reload() }) //Drops stored tweaks, back to settings.json
         modules.stage.add(this)
 
         const file = this.pane.addFolder({ title: 'Settings File', expanded: false })
         file.addButton({ title: 'Export' }).on('click', () => this.exportFile())
         file.addButton({ title: 'Import' }).on('click', () => this.importFile())
-        file.addButton({ title: 'Reset To Saved' }).on('click', () => { localStorage.removeItem(STORAGE_KEY); location.reload() })
 
         const options = { pose: { options: Object.keys(this.settings.haloTimeline.poses).map(name => ({ text: name, value: name })) } }
         const tabs = this.pane.addTab({ pages: Object.keys(SECTIONS).map(title => ({ title })) })
@@ -151,6 +152,16 @@ export default class Debug {
     apply() {
         Object.values(this.modules).forEach(module => module?.refresh?.()) //Optional modules (test) can be null
         try { localStorage.setItem(STORAGE_KEY, JSON.stringify(this.settings)) } catch {}
+    }
+
+    //Writes the current values into src/settings.json via the dev server (vite.config.js), Vite then reloads the page
+    async saveDefault() {
+        try {
+            let response = await fetch('/__save-settings', { method: 'POST', body: JSON.stringify(this.settings) })
+            if (!response.ok) throw new Error(await response.text())
+            localStorage.removeItem(STORAGE_KEY) //The file is the truth now
+        }
+        catch (error) { console.error('Save As Default only works on the dev server', error) }
     }
 
     exportFile() {
