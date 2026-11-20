@@ -6,6 +6,9 @@ const supportsWebGPU = async () => {
     catch { return false }
 }
 
+//Full-frame focal length in mm to vertical field of view in degrees, across the 24mm sensor height
+export const lensToFov = lens => MathUtils.radToDeg(2 * Math.atan(12 / lens))
+
 //The one canvas: renderer, camera, frame loop. Modules added here get update(delta, elapsed) every frame,
 //optionally renderBackground(renderer) to draw behind the scene, and resize()
 export default class Stage {
@@ -13,12 +16,13 @@ export default class Stage {
         this.canvas = canvas
         this.settings = settings
         this.scene = new Scene()
-        this.camera = new PerspectiveCamera()
+        this.camera = new PerspectiveCamera(50, 1, 1, 10000) //Long lenses put anchored rings far back, the far plane must reach them
         this.camera.up.set(0, 0, -1) //Looking straight down makes the default up parallel to the view, a lookAt() singularity
         this.timer = new Timer()
         this.modules = new Set()
         this.pointer = { x: 0, y: 0 }
         this.lookTarget = new Vector3()
+        this.renderScene = () => this.renderer.render(this.scene, this.camera) //Replaceable, e.g. by a post-processed look
     }
 
     async setup() {
@@ -36,8 +40,9 @@ export default class Stage {
     add(...modules) { modules.forEach(module => this.modules.add(module)) }
     remove(...modules) { modules.forEach(module => this.modules.delete(module)) }
 
+    //`lens` is the default, poses with their own lens override it, see HaloTimeline.js
     refresh() {
-        this.camera.fov = this.settings.fov
+        this.camera.fov = lensToFov(this.settings.lens)
         this.camera.position.set(0, this.settings.cameraHeight, 0)
         this.resize()
     }
@@ -72,7 +77,7 @@ export default class Stage {
         this.modules.forEach(module => module.update(delta, elapsed))
         this.renderer.clear()
         this.modules.forEach(module => module.renderBackground?.(this.renderer))
-        this.renderer.render(this.scene, this.camera)
+        this.renderScene()
 
         //Fades in once the first frame is on screen instead of popping in, see .webgl in base.css
         if (!this.shown) requestAnimationFrame(() => this.canvas.classList.add('is-visible'))

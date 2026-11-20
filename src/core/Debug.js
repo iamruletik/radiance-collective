@@ -10,12 +10,13 @@ const SECTIONS = {
     Global: ['stage', 'scroll', 'transition', 'reveal'],
     Preloader: ['preloader'],
     Home: ['halo', 'haloTimeline', 'clients', 'haloSlider'],
-    Footer: ['clouds']
+    Footer: ['clouds'],
+    Test: ['test'] //Only does something with ?test
 }
 
 //Slider ranges and dropdowns by setting name, anything unlisted gets Tweakpane's default input
 const CONTROLS = {
-    fov: { min: 20, max: 120, step: 1 },
+    lens: { min: 12, max: 200, step: 1 },
     cameraHeight: { min: 10, max: 300, step: 1 },
     maxPixelRatio: { min: 0.5, max: 3, step: 0.25 },
     parallaxStrength: { min: 0, max: 20, step: 0.1 },
@@ -67,7 +68,7 @@ const CONTROLS = {
     idleAmplitude: { min: 0, max: 1, step: 0.01 },
     idlePeriod: { min: 0.5, max: 10, step: 0.1 },
     rotationX: { min: -Math.PI, max: Math.PI, step: 0.01 },
-    positionY: { min: -200, max: 95, step: 1 },
+    positionY: { min: -200, max: 99, step: 1 },
     positionZ: { min: -200, max: 200, step: 1 },
     scroll: { min: 0, max: 25, step: 0.05 },
     easing: { options: { Smooth: 'smooth', Linear: 'linear' } },
@@ -79,6 +80,11 @@ const CONTROLS = {
     outDuration: { min: 0, max: 2, step: 0.05 },
     outStagger: { min: 0, max: 0.3, step: 0.01 },
     cascade: { min: 0, max: 0.5, step: 0.01 },
+    glowIntensity: { min: 0, max: 10, step: 0.05 },
+    falloff: { min: 0.1, max: 6, step: 0.05 },
+    bloomStrength: { min: 0, max: 5, step: 0.05 },
+    bloomRadius: { min: 0, max: 1, step: 0.01 },
+    bloomThreshold: { min: 0, max: 2, step: 0.01 },
     spinTurns: { min: 0, max: 5, step: 0.25 },
     panelCount: { min: 1, max: 32, step: 1 },
     panelGap: { min: 0, max: 0.5, step: 0.01 },
@@ -143,7 +149,7 @@ export default class Debug {
     }
 
     apply() {
-        Object.values(this.modules).forEach(module => module.refresh?.())
+        Object.values(this.modules).forEach(module => module?.refresh?.()) //Optional modules (test) can be null
         try { localStorage.setItem(STORAGE_KEY, JSON.stringify(this.settings)) } catch {}
     }
 

@@ -1,4 +1,5 @@
 import { MathUtils } from 'three/webgpu'
+import { lensToFov } from '../core/Stage.js'
 
 const { lerp, damp, clamp, inverseLerp, smootherstep, degToRad } = MathUtils
 
@@ -17,7 +18,8 @@ const screenTop = (element, box) => {
 //holding a pose and the full X spins done so far. The ring eases toward the playing timeline, so switching pages glides instead of jumping
 //An idle swing is added on top, so the ring never stops
 //A keyframe with a `section` counts its scroll from where that [data-halo-section] starts, `easing: "linear"` moves evenly instead of easing
-//A pose with an `anchor` fits the ring inside the [data-halo-anchor] box of that name, as if it were an element in it
+//A pose with an `anchor` fits the ring inside the [data-halo-anchor] box of that name, as if it were an element in it, at any lens
+//A pose with its own `lens` (mm) eases the camera to it, e.g. a wide lens to sit inside the ring. Without one it uses the stage lens
 export default class HaloTimeline {
     constructor(halo, settings, stage, getScroll) {
         this.halo = halo
@@ -67,11 +69,11 @@ export default class HaloTimeline {
         this.anchorPoses()
     }
 
-    //Solves distance and screen offset so the ring fits inside its box, centred on it
+    //Solves distance and screen offset so the ring fits inside its box, centred on it, at the stage lens
     anchorPoses() {
         const { radius, tube } = this.halo.settings
         const { camera, height: viewportHeight } = this.stage
-        const halfView = Math.tan(degToRad(camera.fov) / 2)
+        const halfView = Math.tan(degToRad(lensToFov(this.stage.settings.lens)) / 2)
 
         for (const [name, pose] of Object.entries(this.settings.poses)) {
             const element = pose.anchor && document.querySelector(`[data-halo-anchor="${pose.anchor}"]`)
@@ -98,17 +100,20 @@ export default class HaloTimeline {
         const from = keyframes[index], to = keyframes[index + 1] ?? from
         const progress = to.easing == 'linear' ? clamp(inverseLerp(from.scroll, to.scroll, scroll), 0, 1) : smootherstep(scroll, from.scroll, to.scroll)
         const start = this.anchored[from.pose] ?? poses[from.pose], end = this.anchored[to.pose] ?? poses[to.pose]
+        const fovOf = name => lensToFov(poses[name].lens ?? this.stage.settings.lens)
 
         return {
             rotationX: lerp(start.rotationX, end.rotationX, progress) + lerp(from.spinTurns, to.spinTurns, progress) * Math.PI * 2,
             positionY: lerp(start.positionY, end.positionY, progress),
-            positionZ: lerp(start.positionZ, end.positionZ, progress)
+            positionZ: lerp(start.positionZ, end.positionZ, progress),
+            fov: lerp(fovOf(from.pose), fovOf(to.pose), progress)
         }
     }
 
     //Animation
     update(delta, elapsed) {
         const { smoothing, idleAmplitude, idlePeriod } = this.settings
+        const { camera } = this.stage
         const target = this.sample(this.getScroll())
 
         this.pose ??= target
@@ -116,6 +121,10 @@ export default class HaloTimeline {
 
         this.halo.mesh.rotation.x = this.pose.rotationX + Math.sin(elapsed * Math.PI / idlePeriod) * idleAmplitude
         this.halo.mesh.position.set(0, this.pose.positionY, this.pose.positionZ)
+
+        if (Math.abs(camera.fov - this.pose.fov) < 1e-4) return
+        camera.fov = this.pose.fov
+        camera.updateProjectionMatrix()
     }
 
     destroy() { document.documentElement.style.removeProperty('--halo-timeline-length') }

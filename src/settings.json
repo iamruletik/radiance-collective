@@ -1,6 +1,6 @@
 {
   "stage": {
-    "fov": 75,
+    "lens": 200,
     "cameraHeight": 100,
     "maxPixelRatio": 2,
     "parallaxStrength": 2,
@@ -47,6 +47,16 @@
     "shadow": 0.4,
     "sunX": 0.52
   },
+  "test": {
+    "background": "#DBCFBC",
+    "coreColor": "#FEFFEF",
+    "edgeColor": "#F2D2A1",
+    "falloff": 3,
+    "glowIntensity": 1.5,
+    "bloomStrength": 1,
+    "bloomRadius": 0.5,
+    "bloomThreshold": 0.8
+  },
   "transition": {
     "duration": 0.4,
     "ease": "easeInOut"
@@ -71,7 +81,7 @@
     "idlePeriod": 3,
     "poses": {
       "rest": { "rotationX": 0.3927, "anchor": "hero" },
-      "near": { "rotationX": 0.1, "positionY": 85, "positionZ": 10 },
+      "near": { "rotationX": 0.1, "positionY": 85, "positionZ": 10, "lens": 16 },
       "logo": { "rotationX": 0.29, "anchor": "header" },
       "clients": { "rotationX": 0, "anchor": "clients" }
     },

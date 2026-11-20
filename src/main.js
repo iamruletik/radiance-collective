@@ -17,6 +17,9 @@ history.scrollRestoration = 'manual'
 //Dev only, delete at release. Loads before modules so stored tweaks apply from the first frame
 const debug = new URLSearchParams(location.search).has('debug') ? new (await import('./core/Debug.js')).default(settings) : null
 
+//Experimental look, ?test only. Loaded before anything renders. Delete this, the `test` lines below and src/variants/ to drop it
+const TestLook = new URLSearchParams(location.search).has('test') ? (await import('./variants/TestLook.js')).default : null
+
 const stage = new Stage(document.querySelector('canvas.webgl'), settings.stage)
 await stage.setup()
 
@@ -31,6 +34,9 @@ const getScroll = () => lenis.scroll / stage.height
 const halo = new Halo(settings.halo)
 halo.setup()
 stage.scene.add(halo.mesh)
+
+const test = TestLook ? new TestLook(stage, halo, settings.test) : null
+test?.setup()
 
 const haloTimeline = new HaloTimeline(halo, settings.haloTimeline, stage, getScroll)
 const getSectionScroll = section => getScroll() - (haloTimeline.sections[section] ?? 0) //Viewports since a [data-halo-section] reached the top
@@ -48,7 +54,7 @@ preloader.wait(haloSlider.preload())
 preloader.wait(document.fonts.ready.then(() => haloTimeline.measure())) //Fonts shift the layout the halo measures
 
 stage.add(scroll, haloTimeline, preloader, clouds)
-debug?.setup({ stage, scroll, preloader, halo, haloTimeline, haloSlider, clouds })
+debug?.setup({ stage, scroll, preloader, halo, haloTimeline, haloSlider, clouds, test })
 
 lenis.stop()
 preloader.play().then(() => lenis.start())
