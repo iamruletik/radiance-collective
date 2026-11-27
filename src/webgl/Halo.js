@@ -148,6 +148,7 @@ export default class Halo {
     }
 
     loadMatcap(name) {
+        if (!name) return
         const { texture, loaded } = this.loadTexture(MATCAPS[name])
         texture.colorSpace = SRGBColorSpace
         this.material.matcap?.dispose()

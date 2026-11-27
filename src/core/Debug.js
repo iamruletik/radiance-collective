@@ -10,7 +10,6 @@ const SECTIONS = {
     Global: ['stage', 'scroll', 'transition', 'reveal'],
     Preloader: ['preloader'],
     Home: ['halo', 'haloTimeline', 'clients', 'haloSlider'],
-    Footer: ['clouds'],
     Test: ['test'] //Only does something with ?test
 }
 

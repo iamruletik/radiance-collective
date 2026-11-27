@@ -16,6 +16,8 @@ export default class Clients {
     }
 
     setup() {
+        let [, end] = this.haloTimeline.range('clients', 'clients')
+        this.element.style.setProperty('--clients-length', end + 1)
         this.reveals.forEach(reveal => reveal.setup())
         this.stage.add(this)
     }

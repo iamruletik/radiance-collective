@@ -1,4 +1,4 @@
-import { WebGPURenderer, Scene, PerspectiveCamera, Vector3, Timer, MathUtils } from 'three/webgpu'
+import { WebGPURenderer, PCFShadowMap, Scene, PerspectiveCamera, Vector3, Timer, MathUtils } from 'three/webgpu'
 
 //Some browsers expose navigator.gpu but return null from getContext('webgpu'), which crashes on first render instead of falling back to WebGL2
 const supportsWebGPU = async () => {
@@ -27,6 +27,8 @@ export default class Stage {
 
     async setup() {
         this.renderer = new WebGPURenderer({ canvas: this.canvas, alpha: true, antialias: true, powerPreference: 'high-performance', forceWebGL: !(await supportsWebGPU()) })
+        this.renderer.shadowMap.enabled = true
+        this.renderer.shadowMap.type = PCFShadowMap
         await this.renderer.init() //Resolves the backend before first render
         this.renderer.autoClear = false //Cleared once per frame in update(), so backgrounds can draw before the scene
         this.backend = this.renderer.backend.isWebGPUBackend ? 'WebGPU' : 'WebGL2'
@@ -34,6 +36,8 @@ export default class Stage {
         this.refresh()
         addEventListener('resize', this.resize)
         addEventListener('pointermove', this.pointermove)
+        document.documentElement.addEventListener('pointerleave', this.clearHover)
+        addEventListener('blur', this.clearHover)
         this.renderer.setAnimationLoop(this.update)
     }
 
@@ -59,6 +63,8 @@ export default class Stage {
     }
 
     //-1..1 across the screen, y down. `mouse` tells hover effects a real cursor is there, not a touch
+    clearHover = () => { this.pointer.mouse = false }
+
     pointermove = ({ clientX, clientY, pointerType }) => {
         this.pointer.x = clientX / innerWidth * 2 - 1
         this.pointer.y = clientY / innerHeight * 2 - 1
@@ -88,6 +94,8 @@ export default class Stage {
         this.renderer.setAnimationLoop(null)
         removeEventListener('resize', this.resize)
         removeEventListener('pointermove', this.pointermove)
+        document.documentElement.removeEventListener('pointerleave', this.clearHover)
+        removeEventListener('blur', this.clearHover)
         this.timer.dispose()
         this.renderer.dispose()
     }

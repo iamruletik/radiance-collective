@@ -6,9 +6,9 @@ import Preloader from './core/Preloader.js'
 import Halo from './webgl/Halo.js'
 import HaloTimeline from './webgl/HaloTimeline.js'
 import HaloSlider from './webgl/HaloSlider.js'
-import Clouds from './webgl/clouds/Clouds.js'
 import Fade from './transitions/Fade.js'
 import Showreel from './components/Showreel.js'
+import Awards from './webgl/Awards.js'
 import Clients from './components/Clients.js'
 import Intro from './components/Intro.js'
 
@@ -18,7 +18,10 @@ history.scrollRestoration = 'manual'
 const debug = new URLSearchParams(location.search).has('debug') ? new (await import('./core/Debug.js')).default(settings) : null
 
 //Experimental look, ?test only. Loaded before anything renders. Delete this, the `test` lines below and src/variants/ to drop it
-const TestLook = new URLSearchParams(location.search).has('test') ? (await import('./variants/TestLook.js')).default : null
+const variantQuery = new URLSearchParams(location.search)
+const SolarLook = variantQuery.has('var2') ? (await import('./variants/SolarLook.js')).default : null
+const ResinLook = !SolarLook && variantQuery.has('var1') ? (await import('./variants/ResinLook.js')).default : null
+const TestLook = !SolarLook && !ResinLook && variantQuery.has('test') ? (await import('./variants/TestLook.js')).default : null
 
 const stage = new Stage(document.querySelector('canvas.webgl'), settings.stage)
 await stage.setup()
@@ -31,30 +34,34 @@ const scroll = {
 }
 const getScroll = () => lenis.scroll / stage.height
 
-const halo = new Halo(settings.halo)
+const halo = new Halo(SolarLook ? { ...settings.halo, matcap: null, tube: settings.halo.tube * SolarLook.tubeScale } : settings.halo)
 halo.setup()
 stage.scene.add(halo.mesh)
 
 const test = TestLook ? new TestLook(stage, halo, settings.test) : null
 test?.setup()
+const resin = ResinLook ? new ResinLook(stage, halo) : null
+resin?.setup()
 
 const haloTimeline = new HaloTimeline(halo, settings.haloTimeline, stage, getScroll)
 const getSectionScroll = section => getScroll() - (haloTimeline.sections[section] ?? 0) //Viewports since a [data-halo-section] reached the top
 const haloSlider = new HaloSlider(halo, settings.haloSlider, stage, () => getSectionScroll(settings.haloSlider.section))
+const solar = SolarLook ? new SolarLook(stage, halo, haloSlider) : null
+solar?.setup()
 const preloader = new Preloader(halo, settings.preloader)
-const clouds = new Clouds(stage, settings.clouds, document.querySelector('.footer'))
 haloTimeline.setup()
 haloSlider.setup()
 preloader.setup()
 
 //Everything the site needs before it shows
 preloader.wait(halo.loaded)
-preloader.wait(clouds.setup())
 preloader.wait(haloSlider.preload())
 preloader.wait(document.fonts.ready.then(() => haloTimeline.measure())) //Fonts shift the layout the halo measures
 
-stage.add(scroll, haloTimeline, preloader, clouds)
-debug?.setup({ stage, scroll, preloader, halo, haloTimeline, haloSlider, clouds, test })
+stage.add(scroll, haloTimeline, preloader)
+if (resin) stage.add(resin)
+if (solar) stage.add(solar)
+debug?.setup({ stage, scroll, preloader, halo, haloTimeline, haloSlider, test })
 
 lenis.stop()
 preloader.play().then(() => lenis.start())
@@ -66,8 +73,8 @@ const PAGES = {
 const DEFAULT_PAGE = { timeline: 'header', modules: [] }
 
 //DOM components, mounted per page from <section data-component="name">, each gets the element and this context
-const COMPONENTS = { intro: Intro, showreel: Showreel, clients: Clients }
-const context = { stage, halo, haloTimeline, preloader, getScroll, settings }
+const COMPONENTS = { intro: Intro, showreel: Showreel, clients: Clients, awards: Awards }
+const context = { stage, solar, halo, haloTimeline, preloader, getScroll, settings }
 
 //The header lives outside the pages, so its intro mounts once
 new Intro(document.querySelector('.header'), context).setup()
@@ -86,6 +93,7 @@ const showPage = (content) => {
         .filter(element => COMPONENTS[element.dataset.component])
         .map(element => new COMPONENTS[element.dataset.component](element, context))
     components.forEach(component => component.setup())
+    haloTimeline.measure()
 }
 
 //Router

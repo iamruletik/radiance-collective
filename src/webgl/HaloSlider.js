@@ -149,7 +149,7 @@ export default class HaloSlider {
         const scroll = this.getScroll()
         this.halo.relief.progress.value = smootherstep(scroll, reliefIn.start, reliefIn.end)
 
-        const visibility = smootherstep(scroll, fadeIn.start, fadeIn.end) * (1 - smootherstep(scroll, fadeOut.start, fadeOut.end))
+        const visibility = this.visibility = smootherstep(scroll, fadeIn.start, fadeIn.end) * (1 - smootherstep(scroll, fadeOut.start, fadeOut.end))
         this.group.visible = visibility > 0.001
         if (!this.group.visible) return this.setHovered(-1)
 
@@ -160,6 +160,7 @@ export default class HaloSlider {
     }
 
     hide() {
+        this.visibility = 0
         this.group.visible = false
         this.setHovered(-1)
     }

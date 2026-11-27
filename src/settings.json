@@ -84,6 +84,7 @@
         "rotationX": 0.3927,
         "anchor": "hero"
       },
+      "awards": { "rotationX": 0.3927, "anchor": "awards" },
       "near": {
         "rotationX": 0.1,
         "positionY": 85,
@@ -150,9 +151,11 @@
         {
           "section": "clients",
           "scroll": 18.1,
-          "pose": "logo",
+          "pose": "awards",
           "spinTurns": 4
-        }
+        },
+        { "section": "awards", "scroll": 2, "pose": "awards", "spinTurns": 4 },
+        { "section": "awards", "scroll": 3, "pose": "logo", "spinTurns": 4 }
       ],
       "header": [
         {
